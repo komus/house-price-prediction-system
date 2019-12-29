@@ -197,15 +197,12 @@ rmse_results<- bind_rows(rmse_results, tibble(method = "Ensemble", RMSE = mean(r
 rmse_results %>% knitr::kable()
 
 ## From the results above KNN has the least RMSE. 
-#train the full test dataset
+#train the full test dataset using KNN
 
 control <- trainControl(method = "cv", number = 10, p = .9)
 train_final<- train(SalePrice ~ ., method="knn", data = final_trainset, tuneGrid = data.frame(k = seq(1, 71, 2)),
                    trControl = control)
-knn_final <- predict(train_final, validation)
 
-rmse_final <- RMSE(knn_final, validation$SalePrice)
-mean(rmse_final)
 
 #Prepare the prediction data
 prediction <- predict(train_final, final_testset)
@@ -216,3 +213,17 @@ final_prep <- data.frame(Id= output$Id, SalePrice = output$prediction)
 
 #Write the fianl result to a text file
 write.csv(final_prep, file = "housePrice_submission1.csv", row.names = F)
+
+#train the full test dataset using regression tree
+final_rpart <- train(SalePrice ~., method="rpart", tuneGrid = data.frame(cp = seq(0, 0.05, len = 100)),
+                     data = final_trainset)
+
+#Prepare the prediction data
+prediction_rpart <- predict(final_rpart, final_testset)
+#Bind the result to the test dataset
+output <- cbind(final_testset, prediction_rpart)
+#prepare the final prediction result for Submission File Format
+final_prep <- data.frame(Id= output$Id, SalePrice = output$prediction_rpart)
+
+#Write the fianl result to a text file
+write.csv(final_prep, file = "housePrice_submission2.csv", row.names = F)

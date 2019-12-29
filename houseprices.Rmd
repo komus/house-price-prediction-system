@@ -239,24 +239,21 @@ one can usually greatly improve the final results by combining the results of di
 p <- (knn_y_hat +rpart_yhat + rf_yhat)/3
 rmse_em <- RMSE(p, validation$SalePrice)
 rmse_results<- bind_rows(rmse_results, tibble(method = "Ensemble", RMSE = mean(rmse_em)))
+mean(rmse_em)
+rmse_results %>% knitr::kable()
 ```
 
 
 ## Performance Analysis and Result
+ 
+From the result above, the KNN method and Regression Tree will be used to train the full train dataset and the result used to predict SalePrice for test dataset.
 ```{r}
-rmse_results %>% knitr::kable()
-```
-From the result above, K-Nearest Neighbour has the least RMSE. Therefore, the KNN method will be used to train the full train dataset and the result used to predict SalePrice for test dataset.
-```{r}
-#train the full test dataset
+#train the full test dataset using KNN
 
 control <- trainControl(method = "cv", number = 10, p = .9)
 train_final<- train(SalePrice ~ ., method="knn", data = final_trainset, tuneGrid = data.frame(k = seq(1, 71, 2)),
                    trControl = control)
-knn_final <- predict(train_final, validation)
 
-rmse_final <- RMSE(knn_final, validation$SalePrice)
-mean(rmse_final)
 
 #Prepare the prediction data
 prediction <- predict(train_final, final_testset)
@@ -265,10 +262,31 @@ output <- cbind(final_testset, prediction)
 #prepare the final prediction result for Submission File Format
 final_prep <- data.frame(Id= output$Id, SalePrice = output$prediction)
 
-#Write the final result to a text file
+#Write the fianl result to a text file
 write.csv(final_prep, file = "housePrice_submission1.csv", row.names = F)
+
+#train the full test dataset using regression tree
+final_rpart <- train(SalePrice ~., method="rpart", tuneGrid = data.frame(cp = seq(0, 0.05, len = 100)),
+                     data = final_trainset)
+
+#Prepare the prediction data
+prediction_rpart <- predict(final_rpart, final_testset)
+#Bind the result to the test dataset
+output <- cbind(final_testset, prediction_rpart)
+#prepare the final prediction result for Submission File Format
+final_prep <- data.frame(Id= output$Id, SalePrice = output$prediction_rpart)
+
+#Write the fianl result to a text file
+write.csv(final_prep, file = "housePrice_submission2.csv", row.names = F)
 ```
 
 ## Conclusion
-KNN is used to predict the house prices for the test dataset. Upon calculation the RMSE of the predicted value is 0.26514 which means the prediction model needs to be improved.
+Upon calculation the RMSE of the predicted value for KNN is 0.26514 while RPart is 0.19305.
+the image below shows the Kaggle computed result for KNN
+![KNN result](knn.jpg)
+
+the image below shows the Kaggle computed result for Regression Tree
+![RPart result](Annotation 2019-12-29 024723.jpg)
+
+The result implies that Regression Tree has a better prediction with low RMSE. Thus the prediction model can be improved since the RMSE target is zero.
 
